@@ -200,6 +200,7 @@ void summarize_neighbor_diversity() {
 	calculate_neighborhood_diversity();
 	while (!check_neighborhood_diversity()) {//近傍多様性が正しくなかったら近傍多様性を求めなおす.
 		cout << "近傍多様性が正しくないのだ！" << endl;
+		cout << "間違ったnd:" << nd << endl;
 		//変数を初期状態に戻す(Monomials,Hash_table,Place_of_vertices,Type_partitions,ndをcalculate_Monomialsを実行する前に戻す)開始.
 		Monomials.clear();
 		Monomials.shrink_to_fit();
@@ -237,13 +238,17 @@ vector<bool> making_induced_subgraph(vector<long long int> Vertex_Subset) {
 	for (long long int i = 0; i < Vertex_Subset.size(); i++) {
 		Exist[Vertex_Subset[i]] = true;
 	}
+	for (int i = 0; i < Induced_subgraph.size(); i++) {
+		Induced_subgraph[i].clear();
+		Induced_subgraph[i].shrink_to_fit();
+	}
 	Induced_subgraph.resize(n);
 	for (long long int i = 0; i < n; i++) {
 		for (long long int j = 0; j < G[i].size(); j++) {
 			//iとG[i][j]がどちらも誘導部分グラフの頂点集合に属するならば.
 			if (Exist[i] && Exist[G[i][j]]) {
 				Induced_subgraph[i].push_back(G[i][j]);
-			};//
+			};
 		}
 	}
 	return Exist;
@@ -314,6 +319,7 @@ void sort_in_order_of_thresholds() {
 vector<long long int> A;
 bool exist = false;
 void overlapping_combination(long long int s, long long int t) {
+	//cout << "s: " << s << " t: " << t << endl;
 	clock_t now = clock();
 	if ((double)(now - start) / CLOCKS_PER_SEC >= 3600) {
 		cout << (double)(now - start) / CLOCKS_PER_SEC << "sec." << endl;
@@ -325,15 +331,26 @@ void overlapping_combination(long long int s, long long int t) {
 	if (s == nd && t == 0) {
 		//デバック用開始.
 		/*
+		cout << "A:" << endl;
 		for (long long int i = 0; i < nd; i++) {
 			cout << A[i] << " ";
 		}
 		cout << endl;
 		*/
 		//デバック用終了.
+		/*
+		cout << "Type_partition:" << endl;
+		for (long long int i = 0; i < nd; i++) {
+			for (long long int j = 0; j < A[i]; j++) {
+				cout << Type_partitions[i][j] << " ";
+			}
+			cout << endl;
+		}
+		*/
 		vector<long long int> Vertex_Subset;
 		for (long long int i = 0; i < nd; i++) {
-			for (long long int j = 0; j < A[i]; i++) {
+			for (long long int j = 0; j < A[i]; j++) {
+				if (A[i] > Type_partitions[i].size())return;
 				Vertex_Subset.push_back(Type_partitions[i][j]);
 			}
 		}
@@ -343,7 +360,7 @@ void overlapping_combination(long long int s, long long int t) {
 		Influenced = who_is_influenced_not_bit(Exist);
 		vector<bool> YX;
 		YX = calculate_YX(Influenced, Exist);
-		long long int count = 0;
+		long long int count = 0;//Y(X)の頂点数
 		for (long long int i = 0; i < n; i++) {
 			if (YX[i])count++;
 		}
@@ -370,46 +387,28 @@ void overlapping_combination(long long int s, long long int t) {
 		}
 		cout << endl;
 		cout << "count=" << count << endl;
-		cout << "l=" << l << endl;
-		cout << "k=" << k << endl;
 		*/
+		//cout << "l=" << l << endl;
+		//cout << "k=" << k << endl;
 		//デバック終了.
 		if (count <= l) {
 			//cout << "trueです" << endl;
-			cout << "Vertex_Subset" << endl;
-			for (long long int i = 0; i < Vertex_Subset.size(); i++) {
-				cout << Vertex_Subset[i] + 1 << " ";
-			}
-			cout << endl;
-			cout << "Exist" << endl;
-			for (long long int i = 0; i < n; i++) {
-				cout << Exist[i] << " ";
-			}
-			cout << endl;
-			cout << "Influenced" << endl;
-			for (long long int i = 0; i < n; i++) {
-				cout << Influenced[i] << " ";
-			}
-			cout << endl;
-			cout << "YX" << endl;
-			for (long long int i = 0; i < n; i++) {
-				cout << YX[i] << " ";
-			}
-			cout << endl;
 			exist = true;
 			return;
 		}
 		//cout << "falseです.aaaaaaaaaa" << endl;
 		return;
 	}
-	if (s == nd && t != 0) {
-		//cout << "falseです.bbbbbbbbbb" << endl;
-		return;
+	if (s == nd - 1) {
+		A[s] = t;
+		overlapping_combination(s + 1, 0);
 	}
-	for (long long int i = 0; i <= t; i++) {
-		//cout << "i=" << i << endl;
-		A[s] = i;
-		overlapping_combination(s + 1, t - i);
+	else {
+		for (long long int i = 0; i <= t; i++) {
+			//cout << "i=" << i << endl;
+			A[s] = i;
+			overlapping_combination(s + 1, t - i);
+		}
 	}
 	return;
 }
@@ -426,11 +425,11 @@ void IIB_k() {
 
 //メイン関数.
 int main() {
-	//入力開始
-	ifstream ifs1("paper_sample.txt");
+	//入力開始.
+	ifstream ifs1("iceland.txt");
 
 	if (!ifs1) {
-		std::cout << "Error!";
+		std::cout << "Errer!";
 		return 1;
 	}
 
@@ -442,19 +441,19 @@ int main() {
 	while (getline(ifs1, s, ' ')) {     // スペース（' '）で区切って，格納
 		if (count == 0) {//頂点数
 			n = stoll(s);
-			G.resize(n);//グラフの大きさ確保
+			G.resize(n); //グラフの大きさ確保
 			count++;
 		}
 		else if (count == 1) {//枝数
 			m = stoll(s);
 			count++;
 		}
-		else if (count > 1 && count < 4 + 2 * m && count % 2 == 0) {//グラフの枝の端点
+		else if (count > 1 && count < 2 + 2 * m && count % 2 == 0) {//グラフの枝の端点
 			x = stoll(s);
 			x--;
 			count++;
 		}
-		else if (count > 1 && count < 4 + 2 * m && count % 2 == 1) {//グラフの枝のもう一つの端点
+		else if (count > 1 && count < 2 + 2 * m && count % 2 == 1) {//グラフの枝のもう一つの端点
 			y = stoll(s);
 			y--;
 			count++;
@@ -465,7 +464,7 @@ int main() {
 
 	ifs1.close();
 
-	ifstream ifs2("paper_sample_threshold.txt");
+	ifstream ifs2("iceland_threshold.txt");
 
 	if (!ifs2) {
 		std::cout << "Error!";
@@ -497,6 +496,12 @@ int main() {
 	//入力整理終了.
 	//入力確認開始.
 	/*
+	for (long long int i = 0; i < G.size(); i++) {
+		for (long long int j = 0; j < G[i].size(); j++) {
+			cout << G[i][j] << " ";
+		}
+		cout << endl;
+	}
 	cout << "頂点数:" << n << endl;
 	cout << "枝数:" << m << endl;
 	cout << "k:" << k << endl;
@@ -517,13 +522,16 @@ int main() {
 	}
 	//多項式確認終了.
 	*/
-	start = clock();    //時間測定開始.
 
 	summarize_neighbor_diversity();
+
+	cout << "nd: " << nd << endl;
 
 	A.resize(n);
 
 	sort_in_order_of_thresholds();
+
+	start = clock();    //時間測定開始.
 
 	for (long long int parameter_sum = 0; parameter_sum < n + 1; parameter_sum++) {
 		for (long long int i = 0; i < parameter_sum + 1; i++) {
@@ -531,6 +539,15 @@ int main() {
 			l = parameter_sum - k;
 			cout << "k: " << k << " l: " << l << endl;
 			IIB_k();
+			/*
+			for (long long int j = 0; j < Induced_subgraph.size(); j++) {
+				cout << "j: " << j<< endl;
+				for (long long int jj = 0; jj < Induced_subgraph[j].size(); jj++) {
+					cout << Induced_subgraph[j][jj] << " ";
+				}
+				cout << endl;
+			}
+			*/
 			if (exist) {
 				cout << "Yes" << endl;
 				clock_t end = clock();     // 時間測定終了.
